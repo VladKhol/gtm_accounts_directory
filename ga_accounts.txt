@@ -1,0 +1,131 @@
+function get_account_data_6() {
+
+  Logger.log("start script")
+
+  //Create range for input
+  
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("ga_accounts_v4");
+
+  sheet.getRange("A1:H1").setValues([['Account Name', 'Account ID', 'Property Name', 'Property ID', 'Property URL', 'View Name', 'View ID', 'Seitenaufrufe letzte 360 Tage']])
+
+  sheet.getRange("N1:N1").setValue("Beginn processing...")
+
+  //Create time variables for calculation of time period
+
+  var startTime = new Date()
+  startTime = startTime.toString()
+  startTime = new Date(startTime)
+  startTime = startTime.getTime()
+
+  var today = Utilities.formatDate(new Date(),"GTM", "yyy-MM-dd")
+  var priorDate = new Date();
+  priorDate.setDate(priorDate.getDate() - 360)
+  priorDate = Utilities.formatDate(priorDate,"GTM", "yyy-MM-dd");
+
+
+  // Initiating script properties and extracting the start number for accounts iteration
+
+ var scriptProperties = PropertiesService.getScriptProperties(); 
+
+  if (scriptProperties.getProperty("current_account_index") == null) {
+       scriptProperties.setProperty('current_account_index',0 )
+      } 
+  var start_i = Number(scriptProperties.getProperty("current_account_index"))
+
+  //Deleting last row in order to avoid duplications if script is restarted
+
+  if (start_i !== 0) {
+    var last_row = sheet.getLastRow()
+    sheet.deleteRow(last_row)
+  }
+
+  // Creating loop for iterating through accounts
+
+  var accounts = Analytics.Management.Accounts.list();
+
+  try {
+
+  if (accounts.items && accounts.items.length && start_i < accounts.items.length)  {
+    accounts_loop:
+    for (i = start_i; i < accounts.items.length; i++) {
+      sheet.getRange("N1:N1").setValue(`Processing ${i+1} of ${accounts.items.length} accounts...`)
+      var webProperties = Analytics.Management.Webproperties.list(accounts.items[i].id);
+          // Determining values of output if account has no property
+             if (Object.keys(webProperties.items).length == 0) {
+             Logger.log(accounts.items[i].id + " " + accounts.items[i].name + " "
+                      + "NA" + " " + "NA" + " " 
+                       + "NA" + " " + "NA")
+                      
+             sheet.appendRow([accounts.items[i].name,
+             accounts.items[i].id, 
+             "NA", 
+             "NA",      
+             "NA", 
+             "NA", 
+             "NA", 
+             "NA", startTime, currTime, elapsedTime, i]);
+             
+              } else {
+              // Determining output if account has properties
+              for (j = 0; j < webProperties.items.length; j++) {
+              var profiles = Analytics.Management.Profiles.list(accounts.items[i].id, webProperties.items[j].id);
+              for (k = 0; k < profiles.items.length; k++) {
+           
+              Logger.log("i="+ i + " j="+j + " k="+k)
+      
+              var currTime = new Date()
+              currTime = currTime.getTime()
+              var elapsedTime = Math.floor((currTime - startTime)/1000)
+
+
+                    if (j== 0 && k == 0 && elapsedTime >=240) {
+                   // Terminating iteration if loop nears timeout at 240 seconds
+                       Logger.log("Nearing time out; stop looping")
+                       sheet.getRange("N1:N1").setValue(`Nearing time out.Please restart the script.`)
+                       //ScriptApp.newTrigger("get_account_data_4").timeBased().at(new Date(currTime+(1000*30))).create();
+                       scriptProperties.setProperty('current_account_index', i)
+                       Logger.log(scriptProperties.getProperties())
+                      return;
+                   } else {
+                      //Regular iteration with output  
+                      //Determining property URL & number of pageviews
+                      var view_id = "ga:"+profiles.items[k].id
+                      var property_url = webProperties.items[j].websiteUrl
+                      var pageviews = Analytics.Data.Ga.get(view_id, priorDate, today, "ga:pageViews").totalsForAllResults['ga:pageViews'];
+
+                      //Logging results for debugging purposes
+                      Logger.log(accounts.items[i].id + " " + accounts.items[i].name + " "
+                      + webProperties.items[j].id + " " + webProperties.items[j].name + " " 
+                      + profiles.items[k].id + " " + profiles.items[k].name)
+              
+                      //Appending output as row into sheet
+                      sheet.appendRow([accounts.items[i].name,
+                            accounts.items[i].id, 
+                            webProperties.items[j].name, 
+                            webProperties.items[j].id,  
+                            property_url,    
+                            profiles.items[k].name, 
+                            profiles.items[k].id, 
+                            pageviews, startTime, currTime, elapsedTime, i]);
+
+                        //Confirming finished process
+                        if (i == accounts.items.length-1&& j == webProperties.items.length-1 && k== profiles.items.length-1) {
+                        scriptProperties.deleteAllProperties()
+                        sheet.getRange("N1:N1").setValue(`Precessing complete.`)
+                      }
+                    }
+                  } 
+                }
+              }
+            }
+          }
+        }
+    catch(err) {
+    Logger.log("Error message: "+err)
+  }
+}
+
+//Remove all output
+function remove_output_6() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
