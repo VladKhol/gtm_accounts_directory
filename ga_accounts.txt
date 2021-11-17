@@ -1,11 +1,14 @@
 function get_account_data_6() {
 
   Logger.log("start script")
+  
+  //insert the name of the sheet where the results should be stored
+  var result_sheet_name = " "
 
   //Create range for input
   
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = spreadsheet.getSheetByName("ga_accounts_v4");
+  var sheet = spreadsheet.getSheetByName(result_sheet_name);
 
   sheet.getRange("A1:H1").setValues([['Account Name', 'Account ID', 'Property Name', 'Property ID', 'Property URL', 'View Name', 'View ID', 'Seitenaufrufe letzte 360 Tage']])
 
@@ -83,7 +86,6 @@ function get_account_data_6() {
                    // Terminating iteration if loop nears timeout at 240 seconds
                        Logger.log("Nearing time out; stop looping")
                        sheet.getRange("N1:N1").setValue(`Nearing time out.Please restart the script.`)
-                       //ScriptApp.newTrigger("get_account_data_4").timeBased().at(new Date(currTime+(1000*30))).create();
                        scriptProperties.setProperty('current_account_index', i)
                        Logger.log(scriptProperties.getProperties())
                       return;
