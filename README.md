@@ -3,7 +3,7 @@ This app collects data about Google Analytics properties and then detects the Go
 
 ## Description
 The app consists of two parts.
-The first part ga_accounts.txt will run in the Google App Script Environment within Google Sheets. This part of the app crawls all of the available 
+The first part ga_accounts_check.txt will run in the Google App Script Environment within Google Sheets. This part of the app crawls all of the available 
 Google Analytics Accounts, Views and Properties and determines the amount of pagevies within the last 12 months. It returns the list of all accounts, properties and views
 together with the corresponding amount of pageviews.
 
